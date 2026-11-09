@@ -2,55 +2,71 @@
 
 Phaser 3 demo for streaming large Tiled worlds with chunked loading, IndexedDB caching (Dexie), and RBush culling.
 
-## Installation
+**Live demo (after Pages is set up):** https://bertogz.github.io/world-loader-demo/
+
+## Local development
 
 ```bash
 npm install
-```
-
-## Development
-
-```bash
 npm run dev-start
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Production build (local server)
-
-```bash
-npm run build
-npm start
-```
-
-## Compile single-page demo
+## Compile
 
 ```bash
 npm run compile
 ```
 
-Output: **`dist/index.html`** (self-contained, ~2.5 MB).
+Output: `dist/index.html` (self-contained).
 
-## GitHub Pages (live demo)
+---
 
-If the site shows this README instead of the game, Pages is publishing **`main`**, not the built demo.
+## GitHub Pages — get the live URL
 
-### Repo settings (one-time)
+Your Actions runs were succeeding, but **Pages was not wired to the built game**, so GitHub showed the README or no URL.
 
-1. **Settings → Pages**
-2. **Build and deployment → Source:** **Deploy from a branch**
-3. **Branch:** **`gh-pages`** · **Folder:** **`/ (root)`** · **Save**
+### 1. Turn on Pages (this is what creates the link)
 
-### Deploy the game
+1. Repo: **https://github.com/BertoGz/world-loader-demo**
+2. **Settings → Pages**
+3. **Build and deployment → Source:** **`GitHub Actions`** (not “Deploy from a branch”)
+4. Save if prompted — you will **not** pick `main` or `gh-pages` here
 
-Push to **`main`** (include `.github/workflows/github-pages.yml`). The workflow runs `npm run compile` and pushes **`dist/`** to the **`gh-pages`** branch. The live URL is at the top of **Settings → Pages** (e.g. `https://<user>.github.io/<repo>/`).
+The public URL appears at the top of that **Pages** screen **after** step 3 below succeeds:
 
-You can also run the workflow manually: **Actions → Publish live demo → Run workflow**.
+**https://bertogz.github.io/world-loader-demo/**
 
-### Troubleshooting
+### 2. Push the workflow fix and run it
 
-| What you see | Fix |
-|--------------|-----|
-| README / install instructions | Pages source is **`main`**, not **`gh-pages`** |
-| 404 | Wait for the Actions run to finish; confirm **`gh-pages`** exists |
-| Old build | **Actions → Publish live demo → Run workflow** |
+```bash
+git pull
+git add .github/workflows/github-pages.yml README.md
+git commit -m "Fix GitHub Pages deploy"
+git push origin main
+```
+
+### 3. Approve the environment (first time only)
+
+1. **Actions → Publish live demo** — wait for green checkmarks on **both** `build` and `deploy`
+2. If you see **“Waiting for approval”** on `deploy`, open it → **Review deployments** → approve **github-pages**
+3. Go back to **Settings → Pages** — you should see **“Your site is live at …”**
+
+### If there is still no link
+
+| Check | What to do |
+|--------|------------|
+| Source is **Deploy from a branch** | Change to **GitHub Actions** |
+| Only `build` ran, not `deploy` | Approve **github-pages** environment (Settings → Environments) |
+| `publish live demo` failed | Open the failed run → read the **Build single-page demo** log |
+| Old **gh-pages** branch | Ignore it; this workflow no longer uses that branch |
+
+---
+
+## Production build (Node server)
+
+```bash
+npm run build
+npm start
+```
