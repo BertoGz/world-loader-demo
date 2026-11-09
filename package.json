@@ -8,6 +8,7 @@
     "dev-start": "nodemon --inspect=3000",
     "build": "npx webpack",
     "build:dist": "node scripts/build-dist.js",
+    "compile": "node scripts/build-dist.js",
     "start": "node server.js"
   },
   "author": "Berto Gonzalez",

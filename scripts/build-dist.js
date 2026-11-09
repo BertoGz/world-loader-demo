@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Builds dist/index.html (single-page app with inlined JS) plus dist/assets/.
- * Serve dist with any static file server, e.g. npx serve dist
+ * Builds a self-contained dist/index.html (inlined JS + embedded assets).
+ * Optional: --with-assets-folder copies assets/ beside index.html for debugging.
  */
 
 const { execSync } = require("child_process");
@@ -11,6 +11,9 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const distDir = path.join(root, "dist");
 const publicAssets = path.join(root, "public", "assets");
+const worldFilesDir = path.join(publicAssets, "world3-files");
+
+const withAssetsFolder = process.argv.includes("--with-assets-folder");
 
 const ASSET_FILES = [
   "monster-ghost.png",
@@ -45,6 +48,7 @@ const HTML_SHELL = `<!DOCTYPE html>
     </style>
   </head>
   <body>
+    __EMBEDDED_ASSETS__
     __WORKER_BOOTSTRAP__
     __GAME_SCRIPT__
 
@@ -69,6 +73,42 @@ const HTML_SHELL = `<!DOCTYPE html>
 </html>
 `;
 
+const FETCH_SHIM_SOURCE = `
+(function () {
+  var jsonAssets = window.__FETCH_JSON__ || {};
+  var nativeFetch = window.fetch.bind(window);
+
+  function normalizeFetchUrl(url) {
+    if (typeof url !== "string") return url;
+    if (jsonAssets[url] !== undefined) return url;
+    try {
+      var resolved = new URL(url, window.location.href).href;
+      if (jsonAssets[resolved] !== undefined) return resolved;
+    } catch (e) {}
+    var assetIndex = url.indexOf("/assets/");
+    if (assetIndex !== -1) {
+      var relative = "." + url.slice(assetIndex);
+      if (jsonAssets[relative] !== undefined) return relative;
+    }
+    return url;
+  }
+
+  window.fetch = function (input, init) {
+    var url = typeof input === "string" ? input : input && input.url;
+    var key = normalizeFetchUrl(url);
+    if (jsonAssets[key] !== undefined) {
+      return Promise.resolve(
+        new Response(JSON.stringify(jsonAssets[key]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+    }
+    return nativeFetch(input, init);
+  };
+})();
+`;
+
 function copyFile(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
@@ -91,7 +131,54 @@ function escapeScriptContents(js) {
   return js.replace(/<\/script/gi, "<\\/script");
 }
 
+function mimeForExt(ext) {
+  if (ext === ".png") return "image/png";
+  if (ext === ".jpg" || ext === ".jpeg") return "image/jpeg";
+  return "application/octet-stream";
+}
+
+function buildEmbeddedAssets() {
+  const fetchJson = {};
+  const assetUrls = {};
+
+  for (const file of ASSET_FILES) {
+    const relative = `./assets/${file}`;
+    const buffer = fs.readFileSync(path.join(publicAssets, file));
+    const mime = mimeForExt(path.extname(file));
+    assetUrls[relative] = `data:${mime};base64,${buffer.toString("base64")}`;
+  }
+
+  for (const name of fs.readdirSync(worldFilesDir)) {
+    if (!name.endsWith(".json")) continue;
+    const relative = `./assets/world3-files/${name}`;
+    fetchJson[relative] = JSON.parse(
+      fs.readFileSync(path.join(worldFilesDir, name), "utf8")
+    );
+  }
+
+  const payload = `window.__FETCH_JSON__ = ${JSON.stringify(fetchJson)};
+window.__ASSET_URLS__ = ${JSON.stringify(assetUrls)};`;
+
+  return `<script>\n${payload}\n${FETCH_SHIM_SOURCE}\n</script>`;
+}
+
+function cleanDistOutput() {
+  if (fs.existsSync(distDir)) {
+    fs.rmSync(distDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(distDir, { recursive: true });
+}
+
+function syncDocsIndex() {
+  const docsDir = path.join(root, "docs");
+  fs.mkdirSync(docsDir, { recursive: true });
+  copyFile(path.join(distDir, "index.html"), path.join(docsDir, "index.html"));
+  fs.writeFileSync(path.join(docsDir, ".nojekyll"), "");
+}
+
 function main() {
+  cleanDistOutput();
+
   console.log("Running webpack (production)...");
   execSync("npx webpack --config webpack.config.dist.js", {
     cwd: root,
@@ -118,6 +205,8 @@ function main() {
   const workerSource = fs.readFileSync(workerFile, "utf8");
   const gameSource = fs.readFileSync(gameFile, "utf8");
 
+  const embeddedAssets = buildEmbeddedAssets();
+
   const workerBootstrap = `<script>
 (function () {
   var workerSource = ${JSON.stringify(workerSource)};
@@ -128,28 +217,32 @@ function main() {
 
   const gameScript = `<script>\n${escapeScriptContents(gameSource)}\n</script>`;
 
-  const html = HTML_SHELL.replace("__WORKER_BOOTSTRAP__", workerBootstrap).replace(
-    "__GAME_SCRIPT__",
-    gameScript
-  );
+  const html = HTML_SHELL.replace("__EMBEDDED_ASSETS__", embeddedAssets)
+    .replace("__WORKER_BOOTSTRAP__", workerBootstrap)
+    .replace("__GAME_SCRIPT__", gameScript);
 
   for (const file of jsFiles) {
     fs.unlinkSync(file);
   }
-
-  fs.writeFileSync(path.join(distDir, "index.html"), html, "utf8");
-
-  const distAssets = path.join(distDir, "assets");
-  fs.mkdirSync(distAssets, { recursive: true });
-
-  for (const file of ASSET_FILES) {
-    copyFile(path.join(publicAssets, file), path.join(distAssets, file));
+  for (const name of fs.readdirSync(distDir)) {
+    if (name.endsWith(".map") || name.endsWith(".txt")) {
+      fs.unlinkSync(path.join(distDir, name));
+    }
   }
 
-  copyDir(
-    path.join(publicAssets, "world3-files"),
-    path.join(distAssets, "world3-files")
-  );
+  fs.writeFileSync(path.join(distDir, "index.html"), html, "utf8");
+  fs.writeFileSync(path.join(distDir, ".nojekyll"), "");
+
+  if (withAssetsFolder) {
+    const distAssets = path.join(distDir, "assets");
+    fs.mkdirSync(distAssets, { recursive: true });
+    for (const file of ASSET_FILES) {
+      copyFile(path.join(publicAssets, file), path.join(distAssets, file));
+    }
+    copyDir(worldFilesDir, path.join(distAssets, "world3-files"));
+  }
+
+  syncDocsIndex();
 
   const htmlSizeMb = (
     fs.statSync(path.join(distDir, "index.html")).size /
@@ -158,10 +251,15 @@ function main() {
 
   console.log("");
   console.log("Dist build complete:");
-  console.log(`  ${path.join(distDir, "index.html")} (${htmlSizeMb} MB, JS inlined)`);
-  console.log(`  ${path.join(distAssets)} (sprites + world JSON)`);
+  console.log(
+    `  ${path.join(distDir, "index.html")} (${htmlSizeMb} MB, self-contained)`
+  );
+  console.log(`  ${path.join(root, "docs", "index.html")} (GitHub Pages /docs copy)`);
+  if (withAssetsFolder) {
+    console.log(`  ${path.join(distDir, "assets")} (optional external assets)`);
+  }
   console.log("");
-  console.log('Preview: npx serve dist  →  open the URL shown (e.g. http://localhost:3000)');
+  console.log("Preview: npx serve dist");
 }
 
 main();

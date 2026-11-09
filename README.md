@@ -25,13 +25,29 @@ npm run build
 npm start
 ```
 
-## Single-page static dist
-
-Builds `dist/index.html` with all JavaScript inlined (worker via blob URL) and copies game assets to `dist/assets/`:
+## Compile single-page `dist/index.html`
 
 ```bash
-npm run build:dist
+npm run compile
+```
+
+Builds one **self-contained** `dist/index.html` (~2.5 MB): game code, worker, Tiled world JSON, and sprites are embedded. No separate `assets/` folder is required.
+
+Also writes `docs/index.html` (same file) for GitHub Pages branch deploy at `/docs`.
+
+Preview:
+
+```bash
 npx serve dist
 ```
 
-Open the URL from `serve` (must use HTTP; `file://` will not load assets).
+Optional: emit a separate `dist/assets/` tree for debugging:
+
+```bash
+node scripts/build-dist.js --with-assets-folder
+```
+
+## GitHub Pages
+
+- **Actions:** `.github/workflows/github-pages.yml` deploys `dist/` after `npm run compile`.
+- **Branch:** commit `docs/`, set Pages source to **`/docs`**.

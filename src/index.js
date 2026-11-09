@@ -31,6 +31,17 @@ const loaderConfig = {
   table: "any",
 };
 
+function assetUrl(relativePath) {
+  if (
+    typeof window !== "undefined" &&
+    window.__ASSET_URLS__ &&
+    window.__ASSET_URLS__[relativePath]
+  ) {
+    return window.__ASSET_URLS__[relativePath];
+  }
+  return relativePath;
+}
+
 function createRenderTexture() {
   return new ScaledRenderTexture(
     this,
@@ -98,17 +109,17 @@ class Scene extends Phaser.Scene {
     super({ key: "Scene" });
   }
   preload() {
-    this.load.spritesheet("char_sprite", "./assets/monster-ghost.png", {
+    this.load.spritesheet("char_sprite", assetUrl("./assets/monster-ghost.png"), {
       frameWidth: 32,
       frameHeight: 32,
     });
-    this.load.spritesheet("nature_tile", "./assets/nature-tile.png", {
+    this.load.spritesheet("nature_tile", assetUrl("./assets/nature-tile.png"), {
       frameWidth: 16,
       frameHeight: 16,
     });
-    this.load.image("background", "./assets/icons_16x16.png");
-    this.load.image("air-balloon", "./assets/air-balloon.png");
-    this.load.image("tree", "./assets/tree.png");
+    this.load.image("background", assetUrl("./assets/icons_16x16.png"));
+    this.load.image("air-balloon", assetUrl("./assets/air-balloon.png"));
+    this.load.image("tree", assetUrl("./assets/tree.png"));
   }
   create() {
     this.worldLoader = worldAPI.createLoader(loaderConfig);
