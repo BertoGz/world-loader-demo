@@ -169,13 +169,6 @@ function cleanDistOutput() {
   fs.mkdirSync(distDir, { recursive: true });
 }
 
-function syncDocsIndex() {
-  const docsDir = path.join(root, "docs");
-  fs.mkdirSync(docsDir, { recursive: true });
-  copyFile(path.join(distDir, "index.html"), path.join(docsDir, "index.html"));
-  fs.writeFileSync(path.join(docsDir, ".nojekyll"), "");
-}
-
 function main() {
   cleanDistOutput();
 
@@ -242,8 +235,6 @@ function main() {
     copyDir(worldFilesDir, path.join(distAssets, "world3-files"));
   }
 
-  syncDocsIndex();
-
   const htmlSizeMb = (
     fs.statSync(path.join(distDir, "index.html")).size /
     (1024 * 1024)
@@ -254,7 +245,6 @@ function main() {
   console.log(
     `  ${path.join(distDir, "index.html")} (${htmlSizeMb} MB, self-contained)`
   );
-  console.log(`  ${path.join(root, "docs", "index.html")} (GitHub Pages /docs copy)`);
   if (withAssetsFolder) {
     console.log(`  ${path.join(distDir, "assets")} (optional external assets)`);
   }

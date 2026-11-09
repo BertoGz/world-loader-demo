@@ -33,8 +33,6 @@ npm run compile
 
 Builds one **self-contained** `dist/index.html` (~2.5 MB): game code, worker, Tiled world JSON, and sprites are embedded. No separate `assets/` folder is required.
 
-Also writes `docs/index.html` (same file) for GitHub Pages branch deploy at `/docs`.
-
 Preview:
 
 ```bash
@@ -49,5 +47,4 @@ node scripts/build-dist.js --with-assets-folder
 
 ## GitHub Pages
 
-- **Actions:** `.github/workflows/github-pages.yml` deploys `dist/` after `npm run compile`.
-- **Branch:** commit `docs/`, set Pages source to **`/docs`**.
+**Settings → Pages → Source → GitHub Actions.** The workflow runs `npm run compile` and publishes `dist/`.

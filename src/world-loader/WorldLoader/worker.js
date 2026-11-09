@@ -608,15 +608,29 @@ class WorldDb {
       const { chunkWidth, chunkHeight, tileWidth, tileHeight } =
         converted_world[0] || {};
 
-      this.tileParams = {
-        tileWidth,
-        tileHeight,
-        mapWidth: chunkWidth,
-        mapHeight: chunkHeight,
-      };
+      if (
+        chunkWidth != null &&
+        chunkHeight != null &&
+        tileWidth != null &&
+        tileHeight != null
+      ) {
+        this.tileParams = {
+          tileWidth,
+          tileHeight,
+          mapWidth: chunkWidth,
+          mapHeight: chunkHeight,
+        };
 
-      self.postMessage({ type: "worker-ready" });
+        self.postMessage({ type: "worker-ready" });
+        return;
+      }
     }
+
+    self.postMessage({
+      type: "worker-error",
+      payload:
+        "World data is missing or incomplete. Check Clear Storage, reload, and wait for the world build to finish.",
+    });
   }
   cleanUp() {
     delete WorldDb.instance;
