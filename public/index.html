@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1,user-scalable=no, viewport-fit=cover"
+    />
+    <title>World Loader Demo</title>
+    <link rel="manifest" href="/manifest.json" />
+  </head>
+  <style type="text/css">
+    html,
+    canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: white;
+    }
+  </style>
+  <body>
+    <script src="index.bundle.js"></script>
+
+    <div style="display: flex">
+      <fieldset>
+        <legend>controls</legend>
+        <p>press/touch to move</p>
+      </fieldset>
+      <fieldset style="display: flex;">
+        <legend>debug parameters:</legend>
+        <div>
+          <input type="checkbox" id="zoom-out" name="zoom-out" />
+          <label for="zoom-out">Zoom Out</label>
+        </div>
+        <div>
+          <input type="checkbox" id="clear storage" name="clear storage" />
+          <label for="clear storage">Clear Storage</label>
+        </div>
+      </fieldset>
+    </div>
+  </body>
+</html>
